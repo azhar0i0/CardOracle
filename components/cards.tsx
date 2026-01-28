@@ -50,63 +50,71 @@ export default function OracleCard() {
     setShuffling(true);
     Animated.timing(deckOpacity, {
       toValue: 0,
-      duration: 200,
+      duration: 300,
       useNativeDriver: false,
     }).start();
 
-    // Animate all cards
-    const animations = cardAnimations.current.map((anim, index) => {
+    // Animate all cards with smooth spring animations
+    cardAnimations.current.forEach((anim, index) => {
       const isEven = index % 2 === 0;
       const direction = isEven ? -1 : 1;
-      const delay = index * 35;
+      const delay = index * 60; // Smooth cascade timing
 
       setTimeout(() => {
         Animated.parallel([
+          // Fade in smoothly
           Animated.timing(anim.opacity, {
             toValue: 1,
-            duration: 100,
+            duration: 200,
             useNativeDriver: false,
           }),
+          // X movement with spring for natural feel
           Animated.sequence([
-            Animated.timing(anim.x, {
-              toValue: direction * (width * 0.4),
-              duration: 400,
+            Animated.spring(anim.x, {
+              toValue: direction * (width * 0.3),
+              friction: 7,
+              tension: 60,
               useNativeDriver: false,
             }),
-            Animated.timing(anim.x, {
+            Animated.spring(anim.x, {
               toValue: 0,
-              duration: 300,
+              friction: 7,
+              tension: 60,
               useNativeDriver: false,
             }),
           ]),
+          // Rotation with spring
           Animated.sequence([
-            Animated.timing(anim.rotate, {
-              toValue: direction * 15,
-              duration: 300,
+            Animated.spring(anim.rotate, {
+              toValue: direction * 18,
+              friction: 8,
+              tension: 50,
               useNativeDriver: false,
             }),
-            Animated.timing(anim.rotate, {
+            Animated.spring(anim.rotate, {
               toValue: 0,
-              duration: 400,
+              friction: 8,
+              tension: 50,
               useNativeDriver: false,
             }),
           ]),
+          // Scale with spring
           Animated.sequence([
-            Animated.timing(anim.scale, {
-              toValue: 1.1,
-              duration: 200,
+            Animated.spring(anim.scale, {
+              toValue: 1.12,
+              friction: 9,
+              tension: 45,
               useNativeDriver: false,
             }),
-            Animated.timing(anim.scale, {
+            Animated.spring(anim.scale, {
               toValue: 1,
-              duration: 500,
+              friction: 9,
+              tension: 45,
               useNativeDriver: false,
             }),
           ]),
         ]).start();
       }, delay);
-
-      return anim;
     });
 
     // Trigger result after shuffle completes
@@ -118,7 +126,7 @@ export default function OracleCard() {
         duration: 500,
         useNativeDriver: false,
       }).start();
-    }, 1500);
+    }, 1900);
   };
 
   const closeResult = () => {
@@ -135,12 +143,13 @@ export default function OracleCard() {
           style={[
             {
               position: 'absolute',
-              width: 260,
+              width: 240,
               height: 400,
-              borderRadius: 24,
-              backgroundColor: '#1a1a1a',
+              borderRadius: 32,
+              overflow: 'hidden',
+              backgroundColor: '#171717',
               borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.15)',
+              borderColor: 'rgba(255,255,255,0.1)',
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 10 },
               shadowOpacity: 0.5,
@@ -161,16 +170,28 @@ export default function OracleCard() {
             },
           ]}
         >
+          {/* Shuffle Cards Layout */}
           <LinearGradient
-            colors={['#2c3e50', '#000000']}
-            className="flex-1 rounded-[24px] items-center justify-center"
+            colors={['#1e1e1e', '#000']}
+            className="flex-1 justify-between p-8"
           >
-            <View className="w-40 h-60 border border-white/5 rounded-full opacity-20" />
+            <View className="items-center">
+              <Text className="text-amber-200/40 tracking-[4px] uppercase text-[10px] font-bold">The Oracle</Text>
+              <View className="h-[1px] w-16 bg-amber-200/20 mt-2" />
+            </View>
+
+            <View className="items-center">
+              <Text className="text-white text-4xl font-light text-center">Conscious Lead</Text>
+              <Text className="text-amber-200/60 italic mt-4">Tap to Shuffle</Text>
+            </View>
+
+            <Text className="text-gray-500 text-center text-xs italic">By Karina Conscious</Text>
           </LinearGradient>
+
         </Animated.View>
       ))}
 
-      {/* Main deck */}
+      {/* Main Card */}
       {!shuffling && (
         <Pressable
           onPressIn={() => {
@@ -202,7 +223,7 @@ export default function OracleCard() {
               >
                 <View className="items-center">
                   <Text className="text-amber-200/40 tracking-[4px] uppercase text-[10px] font-bold">The Oracle</Text>
-                  <View className="h-[1px] w-12 bg-amber-200/20 mt-2" />
+                  <View className="h-[1px] w-16 bg-amber-200/20 mt-2" />
                 </View>
 
                 <View className="items-center">
@@ -210,7 +231,7 @@ export default function OracleCard() {
                   <Text className="text-amber-200/60 italic mt-4">Tap to Shuffle</Text>
                 </View>
 
-                <Text className="text-white/10 text-center text-xs italic">By Karina Conscious</Text>
+                <Text className="text-gray-500 text-center text-xs italic">By Karina Conscious</Text>
               </LinearGradient>
             </View>
           </Animated.View>

@@ -44,17 +44,27 @@ export const MagicalInput = ({
 // --- Gradient Button ---
 export const MagicalButton = ({ onPress, title, isLoading }: any) => {
   return (
-    <TouchableOpacity onPress={onPress} disabled={isLoading} activeOpacity={0.8}>
+    <TouchableOpacity 
+      onPress={onPress} 
+      disabled={isLoading} 
+      activeOpacity={0.8}
+      style={{ borderRadius: 16, overflow: 'hidden' }}
+    >
       <LinearGradient
-        colors={['#D946EF', '#4F46E5']} // Pink to Purple
+        colors={['#D946EF', '#4F46E5']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        className="h-14 rounded-xl justify-center items-center"
+        style={{
+          height: 56,
+          borderRadius: 16,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
       >
         {isLoading ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text className="text-white font-bold text-lg tracking-widest">{title}</Text>
+          <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 18, letterSpacing: 1 }}>{title}</Text>
         )}
       </LinearGradient>
     </TouchableOpacity>

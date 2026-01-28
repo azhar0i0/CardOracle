@@ -43,7 +43,7 @@ export default function SignIn() {
         <View className="px-6">
           {/* Header */}
           <View className="items-center mb-8">
-            <Text className="text-4xl font-extrabold text-white mb-2 text-center">
+            <Text className="text-5xl font-extrabold text-white mb-2 text-center">
               Welcome Back
             </Text>
             <Text className="text-base text-gray-300 text-center">
