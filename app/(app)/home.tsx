@@ -82,11 +82,16 @@ export default function HomePage() {
         ))}
 
         <SafeAreaView className="flex-1">
-          {/* SETTINGS */}
-          <View className="flex-row justify-end px-6 pt-4">
+          {/* SETTINGS & ALL CARDS */}
+          <View className="flex-row justify-end px-6 pt-4 gap-4">
+            <Link href="/(app)/allCards" asChild>
+              <Pressable>
+                <Ionicons name="grid-outline" size={18} color="gray" />
+              </Pressable>
+            </Link>
             <Link href="/settings" asChild>
               <Pressable>
-                <Ionicons name="settings-outline" size={16} color="gray" opacity={0.6} />
+                <Ionicons name="settings-outline" size={18} color="gray" />
               </Pressable>
             </Link>
           </View>
