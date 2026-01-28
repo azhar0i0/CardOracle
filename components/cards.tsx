@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { Animated, Dimensions, Pressable, Text, View } from 'react-native';
 import RandomCard from './RandomCard';
 import { supabase } from '@/lib/supabase';
@@ -34,39 +34,38 @@ export default function OracleCard() {
       });
     }
   }
+  const [cardIds, setCardIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchIds = async () => {
+      const { data, error } = await supabase
+        .from('cards')
+        .select('id');
+
+      if (!error && data) {
+        setCardIds(data.map(item => item.id));
+      }
+    };
+
+    fetchIds();
+  }, []);
 
   const onShuffleFinished = useCallback(async () => {
-    // Get total count
-    const { count, error: countError } = await supabase
-      .from('cards')
-      .select('*', { count: 'exact', head: true });
+    if (!cardIds.length) return;
 
-    if (countError || !count) {
-      console.error('Error getting card count:', countError);
-      return;
-    }
+    const randomId = cardIds[Math.floor(Math.random() * cardIds.length)];
 
-    // Pick random offset
-    const randomOffset = Math.floor(Math.random() * count);
-
-    // Fetch one card at random offset
     const { data, error } = await supabase
       .from('cards')
       .select('id, name, number, description, image_url')
-      .range(randomOffset, randomOffset)
+      .eq('id', randomId)
       .single();
 
-    if (error) {
-      console.error('Error fetching card:', error);
-      return;
-    }
+    if (error) return console.error(error);
 
     setSelectedCard(data);
-
-    setTimeout(() => {
-      setShowResult(true);
-    }, 200);
-  }, []);
+    setTimeout(() => setShowResult(true), 200);
+  }, [cardIds]);
 
   const startShuffle = () => {
     if (shuffling) return;

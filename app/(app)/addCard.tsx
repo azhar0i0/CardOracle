@@ -1,17 +1,20 @@
+import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import { decode } from 'base64-arraybuffer';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Image, ImageBackground, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// supabase
-import { supabase } from '@/lib/supabase';
+
+
 
 const bgImage = require('../../assets/images/magic_bg.png');
 
 export default function AddCardScreen() {
-    const { editMode, cardId, cardName: paramCardName, cardDescription: paramCardDescription, cardNumber: paramCardNumber } = useLocalSearchParams();
+    const { editMode, cardName: paramCardName, cardDescription: paramCardDescription, cardNumber: paramCardNumber } = useLocalSearchParams();
 
     const [cardName, setCardName] = useState('');
     const [cardNumber, setCardNumber] = useState('');
@@ -48,49 +51,64 @@ export default function AddCardScreen() {
         }
     };
 
-    const uploadImageToSupabase = async (uri: string) => {
-        const response = await fetch(uri);
-        const blob = await response.blob();
+    const getMimeType = async (uri: string) => {
+        const info = await FileSystem.getInfoAsync(uri);
+        const ext = uri.split('.').pop()?.toLowerCase() || '';
 
-        // FIX: force a valid extension + mime type
-        const fileName = `${Date.now()}.jpg`;
-
-        const { error } = await supabase.storage
-            .from('card-images')
-            .upload(fileName, blob, {
-                contentType: 'image/jpeg',
-                upsert: false,
-            });
-
-        if (error) {
-            console.log('UPLOAD ERROR:', error);
-            throw error;
+        if (ext) {
+            if (ext === 'png') return 'image/png';
+            if (ext === 'gif') return 'image/gif';
+            if (ext === 'webp') return 'image/webp';
+            if (ext === 'heic' || ext === 'heif') return 'image/heic';
         }
 
-        const { data } = supabase.storage
-            .from('card-images')
-            .getPublicUrl(fileName);
+        // fallback
+        if (info.exists) return 'image/jpeg';
 
-        return data.publicUrl;
+        return 'image/jpeg';
     };
+
+
+const uploadImageToSupabase = async (uri: string) => {
+  const mimeType = await getMimeType(uri);
+  const ext = mimeType.split('/')[1] || 'jpg';
+  const fileName = `${Date.now()}.${ext}`;
+
+  let fileData: Uint8Array | Blob;
+
+  if (uri.startsWith("file://")) {
+    // MOBILE
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    const arrayBuffer = decode(base64); // returns ArrayBuffer
+    fileData = new Uint8Array(arrayBuffer); // convert to Uint8Array
+  } else {
+    // WEB
+    const response = await fetch(uri);
+    fileData = await response.blob();
+  }
+
+  const { error } = await supabase.storage
+    .from("card-images")
+    .upload(fileName, fileData, {
+      contentType: mimeType,
+      upsert: false,
+    });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage
+    .from("card-images")
+    .getPublicUrl(fileName);
+
+  return data.publicUrl;
+};
+
 
     const handleAddCard = async () => {
         setErrorMsg('');
-
-        // Validation
-        if (!cardName.trim()) {
-            setErrorMsg('Card name is required');
-            return;
-        }
-        if (!cardNumber.trim()) {
-            setErrorMsg('Card number is required');
-            return;
-        }
-        if (!cardDescription.trim()) {
-            setErrorMsg('Card description is required');
-            return;
-        }
-
         setLoading(true);
 
         try {
@@ -100,34 +118,32 @@ export default function AddCardScreen() {
                 imageUrl = await uploadImageToSupabase(cardImage);
             }
 
-            if (isEditing && cardId) {
-                const { error } = await supabase
-                    .from('cards')
-                    .update({
-                        name: cardName,
-                        number: cardNumber,
-                        description: cardDescription,
-                        image_url: imageUrl,
-                    })
-                    .eq('id', cardId);
+            const payload = {
+                name: cardName,
+                number: cardNumber,
+                description: cardDescription,
+                image_url: imageUrl,
+            };
 
-                if (error) throw error;
-            } else {
-                const { error } = await supabase
-                    .from('cards')
-                    .insert({
-                        name: cardName,
-                        number: cardNumber,
-                        description: cardDescription,
-                        image_url: imageUrl,
-                    });
+            console.log('PAYLOAD:', payload);
 
-                if (error) throw error;
+            const { data, error } = await supabase
+                .from('cards')
+                .insert(payload)
+                .select();
+
+            if (error) {
+                console.log('INSERT ERROR:', error);
+                setErrorMsg('Failed to add card. Check console logs.');
+                return;
             }
 
+            console.log('INSERT SUCCESS:', data);
             router.replace('/(app)/allCards');
-        } catch (error) {
-            setErrorMsg(isEditing ? 'Failed to update card. Please try again.' : 'Failed to add card. Please try again.');
+
+        } catch (err) {
+            console.log('CATCH ERROR:', err);
+            setErrorMsg('Failed to add card. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -263,7 +279,7 @@ export default function AddCardScreen() {
                                                 Card Number
                                             </Text>
                                             <View className="flex-row items-center bg-slate-900/60 rounded-xl px-4 h-14 border border-white/10">
-                                                <Ionicons name="hash" size={18} color="#D1D5DB" />
+                                                <Ionicons name="code-outline" size={18} color="#D1D5DB" />
                                                 <TextInput
                                                     className="flex-1 text-white text-base ml-3"
                                                     placeholder="Enter card number"
@@ -303,9 +319,14 @@ export default function AddCardScreen() {
                                             style={{ opacity: loading ? 0.6 : 1 }}
                                         >
                                             <LinearGradient
-                                                colors={['#D946EF', '#4F46E5']}
-                                                start={{ x: 0, y: 0 }}
-                                                end={{ x: 1, y: 1 }}
+                                                colors={[
+                                                    'rgb(26, 15, 46)',
+                                                    'rgb(45, 27, 78)',
+                                                    'rgb(74, 44, 109)',
+                                                    'rgb(45, 27, 78)',
+                                                    'rgb(26, 15, 46)',
+                                                ]}
+                                                locations={[0, 0.25, 0.5, 0.75, 1]}
                                                 style={{
                                                     height: 56,
                                                     borderRadius: 16,

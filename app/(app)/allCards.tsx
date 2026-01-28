@@ -6,7 +6,8 @@ import { Dimensions, FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CardAction from '../../components/CardAction';
 import { supabase } from '@/lib/supabase';
-import { useEffect } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
@@ -25,9 +26,11 @@ export default function AllCardsScreen() {
     const [isCardActionVisible, setIsCardActionVisible] = useState(false);
 
     // fecthing cards from supabase
-    useEffect(() => {
-        fetchCards();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            fetchCards();
+        }, [])
+    );
 
     const fetchCards = async () => {
         const { data, error } = await supabase
@@ -51,7 +54,6 @@ export default function AllCardsScreen() {
     };
 
     const handleDeleteCard = async (cardId: string) => {
-        // log current cards before deletion
         console.log('Before delete:', cards.map(c => c.id));
 
         // delete card
@@ -67,7 +69,6 @@ export default function AllCardsScreen() {
 
         console.log('Deleted card:', cardId);
 
-        // fetch updated cards **and wait for it**
         const { data: newData, error: fetchError } = await supabase
             .from('cards')
             .select('*')
@@ -115,19 +116,14 @@ export default function AllCardsScreen() {
                 {/* Header */}
                 <View className="px-6 pt-4 pb-6">
                     <View className="flex-row items-center justify-between">
-                        {/* Right: Back Button */}
                         <Link href="/(app)/home" asChild>
                             <Pressable>
                                 <Ionicons name="chevron-back" size={24} color="#9CA3AF" />
                             </Pressable>
                         </Link>
-
-                        {/* Center: All Cards Title */}
                         <Text className="text-gray-400 text-sm tracking-[2px] uppercase font-light">
                             All Cards
                         </Text>
-
-                        {/* Left: Card Count with Border */}
                         <View className="border border-amber-200/40 rounded-lg px-4 py-2">
                             <Text className="text-amber-200/60 text-xs tracking-[1px] uppercase font-light">
                                 {cards.length} Cards
@@ -149,7 +145,7 @@ export default function AllCardsScreen() {
                 />
             </SafeAreaView>
 
-            {/* Floating Action Button */}
+            {/* Add Button */}
             <Link href="/(app)/addCard" asChild>
                 <Pressable
                     style={{
@@ -169,9 +165,14 @@ export default function AllCardsScreen() {
                     }}
                 >
                     <LinearGradient
-                        colors={['#D946EF', '#4F46E5']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
+                        colors={[
+                            'rgb(26, 15, 46)',
+                            'rgb(45, 27, 78)',
+                            'rgb(74, 44, 109)',
+                            'rgb(45, 27, 78)',
+                            'rgb(26, 15, 46)',
+                        ]}
+                        locations={[0, 0.25, 0.5, 0.75, 1]}
                         style={{
                             width: 64,
                             height: 64,

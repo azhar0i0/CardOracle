@@ -15,7 +15,7 @@ type CardActionProps = {
         description: string;
         image_url: string | null;
     };
-    onDelete: (cardId: number) => void;
+    onDelete: (cardId: string) => void;
 };
 
 const { width } = Dimensions.get('window');
