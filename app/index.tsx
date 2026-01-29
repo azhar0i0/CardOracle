@@ -1,62 +1,106 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
-    ImageBackground,
+    Image,
+    Animated,
     Platform,
     Pressable,
     StyleSheet,
     Text,
     View,
+    Dimensions,
 } from 'react-native';
 
-const bgImage = require('../assets/images/magic_bg.png');
+const { width } = Dimensions.get('window');
+const ICON_SOURCE = require('@/assets/images/icon.png');
 
 export default function WelcomeScreen() {
+  // Animation for the floating effect
+  const floatingAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Smooth infinite floating animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatingAnim, {
+          toValue: -15,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatingAnim, {
+          toValue: 0,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
   return (
     <View style={styles.container}>
-      <ImageBackground
-        source={bgImage}
-        style={styles.background}
-        resizeMode="cover"
-        blurRadius={Platform.OS === 'web' ? 2 : 8}
-      >
-        {/* Dark gradient overlay */}
         <LinearGradient
-          colors={['rgba(0,0,0,0.2)', 'rgba(10,5,30,0.95)']}
-          style={StyleSheet.absoluteFill}
-        />
-
-        <View style={styles.content}>
-          <Text
-            style={[
-              styles.title,
-              { textShadowColor: '#D946EF', textShadowRadius: 20 },
+            colors={[
+                'rgb(26, 15, 46)',
+                'rgb(45, 27, 78)',
+                'rgb(74, 44, 109)',
+                'rgb(45, 27, 78)',
+                'rgb(26, 15, 46)',
             ]}
-          >
-            Mystic Cards
-          </Text>
+            style={StyleSheet.absoluteFill}
+        >
+            {/* Dark Overlay for depth */}
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.3)' }]} />
 
-          <Text style={styles.subtitle}>
-            Enter the realm of shadows and light.
-          </Text>
+            <View style={styles.content}>
+                
+                {/* --- CENTERED ICON SECTION --- */}
+                <View style={styles.iconWrapper}>
+                    {/* The Glow Effect behind the icon */}
+                    <View style={styles.iconGlow} />
+                    
+                    <Animated.View style={{ transform: [{ translateY: floatingAnim }] }}>
+                        <Image 
+                            source={ICON_SOURCE} 
+                            style={styles.mainIcon}
+                            resizeMode="contain"
+                        />
+                    </Animated.View>
+                </View>
 
-          <View style={styles.buttons}>
-            <Link href="/signup" asChild>
-              <Pressable style={styles.getStartedButton}>
-                <Text style={styles.getStartedText}>Get Started</Text>
-              </Pressable>
-            </Link>
+                {/* --- TEXT SECTION --- */}
+                <View style={styles.textContainer}>
+                    <Text
+                        style={[
+                            styles.title,
+                            { textShadowColor: 'rgba(217, 70, 239, 0.8)', textShadowRadius: 25 },
+                        ]}
+                    >
+                        Mystic Cards
+                    </Text>
 
-            <View style={styles.signInContainer}>
-              <Text style={styles.signInText}>Already a traveler? </Text>
-              <Link href="/signin">
-                <Text style={styles.signInLink}>Sign In</Text>
-              </Link>
+                    <Text style={styles.subtitle}>
+                        Enter the realm of shadows and light.
+                    </Text>
+                </View>
+
+                {/* --- BUTTON SECTION --- */}
+                <View style={styles.buttons}>
+                    <Link href="/signup" asChild>
+                        <Pressable style={styles.getStartedButton}>
+                            <Text style={styles.getStartedText}>Get Started</Text>
+                        </Pressable>
+                    </Link>
+
+                    <View style={styles.signInContainer}>
+                        <Text style={styles.signInText}>Already a traveler? </Text>
+                        <Link href="/signin">
+                            <Text style={styles.signInLink}>Sign In</Text>
+                        </Link>
+                    </View>
+                </View>
             </View>
-          </View>
-        </View>
-      </ImageBackground>
+        </LinearGradient>
     </View>
   );
 }
@@ -64,72 +108,99 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    minHeight: '100%',
     backgroundColor: '#0f172a',
-  },
-  background: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
   },
   content: {
     flex: 1,
-    justifyContent: 'flex-end',
     paddingHorizontal: 32,
     paddingBottom: 64,
+    paddingTop: 80, // Space for top
+    justifyContent: 'space-between', // Spreads icon, text, and buttons
     alignItems: 'center',
   },
+  iconWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  iconGlow: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    backgroundColor: '#D946EF',
+    borderRadius: 100,
+    opacity: 0.15,
+    // Note: 'blur' is hard in RN without libraries, so we use shadow + opacity
+    shadowColor: '#D946EF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 60,
+  },
+  mainIcon: {
+    width: width * 0.45,
+    height: width * 0.45,
+  },
+  textContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
   title: {
-    fontSize: 36,
-    fontWeight: '800',
+    fontSize: 42,
+    fontWeight: '900',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 8,
-    letterSpacing: -1,
+    marginBottom: 12,
+    letterSpacing: 1,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#d1d5db', // text-gray-300
+    fontSize: 18,
+    color: '#9ca3af', 
     textAlign: 'center',
-    marginBottom: 40,
-    fontWeight: '500',
+    fontWeight: '400',
+    opacity: 0.8,
   },
   buttons: {
     width: '100%',
-    gap: 16,
     alignItems: 'center',
   },
   getStartedButton: {
     backgroundColor: '#fff',
-    height: 56,
+    height: 60,
     width: '100%',
-    borderRadius: 28,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#fff',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 20,
-    elevation: 10,
+    ...Platform.select({
+        ios: {
+            shadowColor: '#D946EF',
+            shadowOpacity: 0.4,
+            shadowOffset: { width: 0, height: 10 },
+            shadowRadius: 15,
+        },
+        android: {
+            elevation: 12,
+        }
+    })
   },
   getStartedText: {
-    color: '#4c1d95', // purple-900
+    color: '#4c1d95',
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   signInContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 16,
+    marginTop: 24,
   },
   signInText: {
-    color: '#9ca3af', // gray-400
+    color: '#9ca3af',
     fontSize: 16,
   },
   signInLink: {
     color: '#D946EF',
     fontWeight: '700',
     fontSize: 16,
-    textDecorationLine: 'underline',
   },
 });

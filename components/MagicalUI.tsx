@@ -51,9 +51,10 @@ export const MagicalButton = ({ onPress, title, isLoading }: any) => {
       style={{ borderRadius: 16, overflow: 'hidden' }}
     >
       <LinearGradient
-        colors={['#D946EF', '#4F46E5']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        colors={[
+          'rgb(74, 44, 109)',
+          'rgb(74, 44, 109)',
+        ]}
         style={{
           height: 56,
           borderRadius: 16,

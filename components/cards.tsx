@@ -7,16 +7,22 @@ import { supabase } from '@/lib/supabase';
 const { width } = Dimensions.get('window');
 const CARD_COUNT = 5;
 
-export default function OracleCard() {
+interface Card {
+  id: string;
+  name: string;
+  number: string;
+  description: string;
+  image_url: string | null;
+}
+
+interface OracleCardProps {
+  cards: Card[];
+}
+
+export default function OracleCard({ cards }: OracleCardProps) {
   const [shuffling, setShuffling] = useState(false);
   const [showResult, setShowResult] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<{
-    id: string;
-    name: string;
-    number: string;
-    description: string;
-    image_url: string | null;
-  } | null>(null);
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
 
   const deckScale = useRef(new Animated.Value(1)).current;
   const deckOpacity = useRef(new Animated.Value(1)).current;
@@ -34,38 +40,15 @@ export default function OracleCard() {
       });
     }
   }
-  const [cardIds, setCardIds] = useState<string[]>([]);
+  const onShuffleFinished = useCallback(() => {
+  if (!cards.length) return;
 
-  useEffect(() => {
-    const fetchIds = async () => {
-      const { data, error } = await supabase
-        .from('cards')
-        .select('id');
+  // Select a random card from the 'cards' prop
+  const randomCard = cards[Math.floor(Math.random() * cards.length)];
 
-      if (!error && data) {
-        setCardIds(data.map(item => item.id));
-      }
-    };
-
-    fetchIds();
-  }, []);
-
-  const onShuffleFinished = useCallback(async () => {
-    if (!cardIds.length) return;
-
-    const randomId = cardIds[Math.floor(Math.random() * cardIds.length)];
-
-    const { data, error } = await supabase
-      .from('cards')
-      .select('id, name, number, description, image_url')
-      .eq('id', randomId)
-      .single();
-
-    if (error) return console.error(error);
-
-    setSelectedCard(data);
-    setTimeout(() => setShowResult(true), 200);
-  }, [cardIds]);
+  setSelectedCard(randomCard);
+  setTimeout(() => setShowResult(true), 200);
+}, [cards]);  // Remove the dependency on 'cardIds'
 
   const startShuffle = () => {
     if (shuffling) return;

@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import { Dimensions, FlatList, Pressable, Text, View } from 'react-native';
+import { ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CardAction from '../../components/CardAction';
 import { supabase } from '@/lib/supabase';
@@ -82,119 +83,167 @@ export default function AllCardsScreen() {
         }
     };
 
-    const renderCard = ({ item }: { item: Card }) => (
-        <Pressable
-            style={{ width: CARD_WIDTH, marginBottom: 16 }}
-            onPress={() => handleCardPress(item)}
-        >
-            <View className="rounded-[24px] overflow-hidden shadow-lg">
-                <LinearGradient
-                    colors={['#1e1e1e', '#000']}
-                    className="p-6 justify-between"
-                    style={{ minHeight: 220 }}
-                >
-                    <View className="items-center">
-                        <Text className="text-amber-200/40 tracking-[3px] uppercase text-[8px] font-bold">Oracle</Text>
-                        <View className="h-[1px] w-12 bg-amber-200/20 mt-1.5" />
-                    </View>
+    const renderCard = ({ item }: { item: Card }) => {
+        const hasImage = !!item.image_url;
 
-                    <View className="items-center">
-                        <Text className="text-white text-lg font-light text-center leading-6">
-                            {item.name}
-                        </Text>
-                    </View>
+        return (
+            <Pressable
+                style={{ width: CARD_WIDTH, marginBottom: 16 }}
+                onPress={() => handleCardPress(item)}
+            >
+                <View className="rounded-[24px] overflow-hidden shadow-lg">
+                    {hasImage ? (
+                        // IMAGE BACKGROUND
+                        <ImageBackground
+                            source={{ uri: item.image_url! }}
+                            resizeMode="cover"
+                            style={{
+                                width: '100%',
+                                height: 220,
+                            }}
+                        >
+                            {/* Dark overlay for readability */}
+                            <View className="absolute inset-0 bg-black/55" />
 
-                    <Text className="text-gray-500 text-center text-xs italic">Card #{item.number}</Text>
-                </LinearGradient>
-            </View>
-        </Pressable>
-    );
+                            <View className="p-6 justify-between flex-1">
+                                <View className="items-center">
+                                    <Text className="text-amber-200/40 tracking-[3px] uppercase text-[8px] font-bold">
+                                        Oracle
+                                    </Text>
+                                    <View className="h-[1px] w-12 bg-amber-200/20 mt-1.5" />
+                                </View>
+
+                                <View className="items-center">
+                                    <Text className="text-white text-lg font-light text-center leading-6">
+                                        {item.name}
+                                    </Text>
+                                </View>
+
+                                <Text className="text-gray-300 text-center text-xs italic">
+                                    Card #{item.number}
+                                </Text>
+                            </View>
+                        </ImageBackground>
+                    ) : (
+                        // FALLBACK GRADIENT CARD
+                        <LinearGradient
+                            colors={['#1e1e1e', '#000']}
+                            className="p-6 justify-between"
+                            style={{ minHeight: 220 }}
+                        >
+                            <View className="items-center">
+                                <Text className="text-amber-200/40 tracking-[3px] uppercase text-[8px] font-bold">
+                                    Oracle
+                                </Text>
+                                <View className="h-[1px] w-12 bg-amber-200/20 mt-1.5" />
+                            </View>
+
+                            <View className="items-center">
+                                <Text className="text-white text-lg font-light text-center leading-6">
+                                    {item.name}
+                                </Text>
+                            </View>
+
+                            <Text className="text-gray-500 text-center text-xs italic">
+                                Card #{item.number}
+                            </Text>
+                        </LinearGradient>
+                    )}
+                </View>
+            </Pressable>
+        );
+    };
 
     return (
         <View className="flex-1 bg-gradient-to-b from-slate-950 to-slate-900">
-            <SafeAreaView className="flex-1" edges={['top']}>
-                {/* Header */}
-                <View className="px-6 pt-4 pb-6">
-                    <View className="flex-row items-center justify-between">
-                        <Link href="/(app)/home" asChild>
-                            <Pressable>
-                                <Ionicons name="chevron-back" size={24} color="#9CA3AF" />
-                            </Pressable>
-                        </Link>
-                        <Text className="text-gray-400 text-sm tracking-[2px] uppercase font-light">
-                            All Cards
-                        </Text>
-                        <View className="border border-amber-200/40 rounded-lg px-4 py-2">
-                            <Text className="text-amber-200/60 text-xs tracking-[1px] uppercase font-light">
-                                {cards.length} Cards
+            <LinearGradient
+                colors={['#1e1e1e', '#000']}
+                style={{ flex: 1 }}
+            >
+                <SafeAreaView className="flex-1" edges={['top']}>
+                    {/* Header */}
+                    <View className="px-6 pt-4 pb-6">
+                        <View className="flex-row items-center justify-between">
+                            <Link href="/(app)/home" asChild>
+                                <Pressable>
+                                    <Ionicons name="chevron-back" size={24} color="#9CA3AF" />
+                                </Pressable>
+                            </Link>
+                            <Text className="text-gray-400 text-sm tracking-[2px] uppercase font-light">
+                                All Cards
                             </Text>
+                            <View className="border border-amber-200/40 rounded-lg px-4 py-2">
+                                <Text className="text-amber-200/60 text-xs tracking-[1px] uppercase font-light">
+                                    {cards.length} Cards
+                                </Text>
+                            </View>
                         </View>
                     </View>
-                </View>
 
-                {/* Cards Grid */}
-                <FlatList
-                    data={cards}
-                    renderItem={renderCard}
-                    keyExtractor={(item) => item.id.toString()}
-                    numColumns={2}
-                    columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 16 }}
-                    contentContainerStyle={{ paddingBottom: 100 }}
-                    scrollIndicatorInsets={{ right: 1 }}
-                    showsVerticalScrollIndicator={false}
-                />
-            </SafeAreaView>
+                    {/* Cards Grid */}
+                    <FlatList
+                        data={cards}
+                        renderItem={renderCard}
+                        keyExtractor={(item) => item.id.toString()}
+                        numColumns={2}
+                        columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 16 }}
+                        contentContainerStyle={{ paddingBottom: 100 }}
+                        scrollIndicatorInsets={{ right: 1 }}
+                        showsVerticalScrollIndicator={false}
+                    />
+                </SafeAreaView>
 
-            {/* Add Button */}
-            <Link href="/(app)/addCard" asChild>
-                <Pressable
-                    style={{
-                        position: 'absolute',
-                        bottom: 32,
-                        right: 24,
-                        width: 64,
-                        height: 64,
-                        borderRadius: 32,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.4,
-                        shadowRadius: 12,
-                        elevation: 8,
-                    }}
-                >
-                    <LinearGradient
-                        colors={[
-                            'rgb(26, 15, 46)',
-                            'rgb(45, 27, 78)',
-                            'rgb(74, 44, 109)',
-                            'rgb(45, 27, 78)',
-                            'rgb(26, 15, 46)',
-                        ]}
-                        locations={[0, 0.25, 0.5, 0.75, 1]}
+                {/* Add Button */}
+                <Link href="/(app)/addCard" asChild>
+                    <Pressable
                         style={{
+                            position: 'absolute',
+                            bottom: 32,
+                            right: 24,
                             width: 64,
                             height: 64,
                             borderRadius: 32,
                             justifyContent: 'center',
                             alignItems: 'center',
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.4,
+                            shadowRadius: 12,
+                            elevation: 8,
                         }}
                     >
-                        <Ionicons name="add" size={32} color="white" />
-                    </LinearGradient>
-                </Pressable>
-            </Link>
+                        <LinearGradient
+                            colors={[
+                                'rgb(26, 15, 46)',
+                                'rgb(45, 27, 78)',
+                                'rgb(74, 44, 109)',
+                                'rgb(45, 27, 78)',
+                                'rgb(26, 15, 46)',
+                            ]}
+                            locations={[0, 0.25, 0.5, 0.75, 1]}
+                            style={{
+                                width: 64,
+                                height: 64,
+                                borderRadius: 32,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                            }}
+                        >
+                            <Ionicons name="add" size={32} color="white" />
+                        </LinearGradient>
+                    </Pressable>
+                </Link>
 
-            {/* Card Action Modal */}
-            {selectedCard && (
-                <CardAction
-                    visible={isCardActionVisible}
-                    onClose={() => setIsCardActionVisible(false)}
-                    card={selectedCard}
-                    onDelete={handleDeleteCard}
-                />
-            )}
+                {/* Card Action Modal */}
+                {selectedCard && (
+                    <CardAction
+                        visible={isCardActionVisible}
+                        onClose={() => setIsCardActionVisible(false)}
+                        card={selectedCard}
+                        onDelete={handleDeleteCard}
+                    />
+                )}
+            </LinearGradient>
         </View>
     );
 }

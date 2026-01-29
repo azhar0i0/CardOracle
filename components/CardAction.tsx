@@ -33,6 +33,7 @@ export default function CardAction({ visible, onClose, card, onDelete }: CardAct
                 cardName: card.name,
                 cardDescription: card.description,
                 cardNumber: card.number,
+                cardImage: card.image_url,
             },
         });
     };
@@ -98,11 +99,13 @@ export default function CardAction({ visible, onClose, card, onDelete }: CardAct
                                         pressed && styles.actionTilePressed
                                     ]}
                                 >
-                                    <View style={[styles.iconCircle, { backgroundColor: 'rgba(233, 184, 111, 0.15)' }]}>
-                                        <Ionicons name="pencil" size={24} color="#E9B86F" />
+                                    <View style={styles.actionTile}>
+                                        <View style={[styles.iconCircle, { backgroundColor: 'rgba(233, 184, 111, 0.15)' }]}>
+                                            <Ionicons name="pencil" size={24} color="#E9B86F" />
+                                        </View>
+                                        <Text style={styles.tileTitle}>Edit</Text>
+                                        <Text style={styles.tileSubtitle}>Modify Content</Text>
                                     </View>
-                                    <Text style={styles.tileTitle}>Edit</Text>
-                                    <Text style={styles.tileSubtitle}>Modify Content</Text>
                                 </Pressable>
 
                                 {/* Delete Tile */}
@@ -114,11 +117,13 @@ export default function CardAction({ visible, onClose, card, onDelete }: CardAct
                                         pressed && styles.actionTilePressed
                                     ]}
                                 >
-                                    <View style={[styles.iconCircle, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
-                                        <Ionicons name="trash" size={24} color="#EF4444" />
+                                    <View style={styles.actionTile}>
+                                        <View style={[styles.iconCircle, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+                                            <Ionicons name="trash" size={24} color="#EF4444" />
+                                        </View>
+                                        <Text style={styles.tileTitle}>Delete</Text>
+                                        <Text style={styles.tileSubtitle}>Remove Content</Text>
                                     </View>
-                                    <Text style={[styles.tileTitle, { color: '#EF4444' }]}>Delete</Text>
-                                    <Text style={styles.tileSubtitle}>Remove Card</Text>
                                 </Pressable>
                             </View>
 
@@ -183,6 +188,7 @@ const styles = StyleSheet.create({
     },
     gradientBackground: {
         padding: 24,
+        borderRadius:24,
     },
     boldText: {
         fontWeight: '700',
@@ -274,24 +280,25 @@ const styles = StyleSheet.create({
         gap: 12,
         marginTop: 8,
     },
-    actionTile: {
+    actionTileWrapper: {
         flex: 1,
-        // Increased background opacity for Android visibility
+        borderRadius: 22,
+        borderWidth: 1.5,
+        borderColor: 'rgba(233, 184, 111, 0.35)',
+    },
+    actionTile: {
         backgroundColor: 'rgba(255,255,255,0.08)',
         borderRadius: 20,
         padding: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1.2,
-        // Keep aspect ratio but ensure it doesn't clip
-        aspectRatio: 1,
+        minHeight: 140,
     },
     actionTilePressed: {
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        transform: [{ scale: 0.98 }]
+        transform: [{ scale: 0.97 }],
     },
     iconCircle: {
-        width: 52, // Slightly larger for better touch target/visibility
+        width: 52,
         height: 52,
         borderRadius: 26,
         justifyContent: 'center',
@@ -313,7 +320,7 @@ const styles = StyleSheet.create({
     alertContainer: {
         width: width * 0.8,
         borderRadius: 24,
-        overflow: 'hidden',
+        overflow: 'visible',
         borderWidth: 1,
         borderColor: 'rgba(239, 68, 68, 0.2)',
     },
@@ -362,7 +369,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     btnDeleteText: {
-        color: '#fff',
+        color: '#EF4444',
         fontWeight: '700',
     },
 });

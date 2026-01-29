@@ -14,7 +14,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const bgImage = require('../../assets/images/magic_bg.png');
 
 export default function AddCardScreen() {
-    const { editMode, cardName: paramCardName, cardDescription: paramCardDescription, cardNumber: paramCardNumber } = useLocalSearchParams();
+    const {
+        editMode,
+        cardId,
+        cardName: paramCardName,
+        cardDescription: paramCardDescription,
+        cardNumber: paramCardNumber,
+        cardImage: paramCardImage,
+    } = useLocalSearchParams();
 
     const [cardName, setCardName] = useState('');
     const [cardNumber, setCardNumber] = useState('');
@@ -29,8 +36,15 @@ export default function AddCardScreen() {
             setCardName((paramCardName as string) || '');
             setCardNumber((paramCardNumber as string) || '');
             setCardDescription((paramCardDescription as string) || '');
+            setCardImage((paramCardImage as string) || null);
         }
-    }, [isEditing, paramCardName, paramCardNumber, paramCardDescription]);
+    }, [
+        isEditing,
+        paramCardName,
+        paramCardNumber,
+        paramCardDescription,
+        paramCardImage,
+    ]);
 
     const pickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -69,42 +83,42 @@ export default function AddCardScreen() {
     };
 
 
-const uploadImageToSupabase = async (uri: string) => {
-  const mimeType = await getMimeType(uri);
-  const ext = mimeType.split('/')[1] || 'jpg';
-  const fileName = `${Date.now()}.${ext}`;
+    const uploadImageToSupabase = async (uri: string) => {
+        const mimeType = await getMimeType(uri);
+        const ext = mimeType.split('/')[1] || 'jpg';
+        const fileName = `${Date.now()}.${ext}`;
 
-  let fileData: Uint8Array | Blob;
+        let fileData: Uint8Array | Blob;
 
-  if (uri.startsWith("file://")) {
-    // MOBILE
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
+        if (uri.startsWith("file://")) {
+            // MOBILE
+            const base64 = await FileSystem.readAsStringAsync(uri, {
+                encoding: FileSystem.EncodingType.Base64,
+            });
 
-    const arrayBuffer = decode(base64); // returns ArrayBuffer
-    fileData = new Uint8Array(arrayBuffer); // convert to Uint8Array
-  } else {
-    // WEB
-    const response = await fetch(uri);
-    fileData = await response.blob();
-  }
+            const arrayBuffer = decode(base64);
+            fileData = new Uint8Array(arrayBuffer);
+        } else {
+            // WEB
+            const response = await fetch(uri);
+            fileData = await response.blob();
+        }
 
-  const { error } = await supabase.storage
-    .from("card-images")
-    .upload(fileName, fileData, {
-      contentType: mimeType,
-      upsert: false,
-    });
+        const { error } = await supabase.storage
+            .from("card-images")
+            .upload(fileName, fileData, {
+                contentType: mimeType,
+                upsert: false,
+            });
 
-  if (error) throw error;
+        if (error) throw error;
 
-  const { data } = supabase.storage
-    .from("card-images")
-    .getPublicUrl(fileName);
+        const { data } = supabase.storage
+            .from("card-images")
+            .getPublicUrl(fileName);
 
-  return data.publicUrl;
-};
+        return data.publicUrl;
+    };
 
 
     const handleAddCard = async () => {
@@ -114,36 +128,63 @@ const uploadImageToSupabase = async (uri: string) => {
         try {
             let imageUrl = null;
 
-            if (cardImage) {
-                imageUrl = await uploadImageToSupabase(cardImage);
+            // If the card is being edited and there's an existing image
+            if (isEditing && cardImage && cardImage !== paramCardImage) {
+                // Step 1: Delete old image from Supabase if editing and image is different
+                if (paramCardImage && typeof paramCardImage === 'string') {
+                    const oldImageName = paramCardImage.split('/').pop();
+                    if (oldImageName) {
+                        const { error: deleteError } = await supabase.storage
+                            .from('card-images')
+                            .remove([oldImageName]);
+
+                        if (deleteError) throw deleteError;
+                    }
+                }
             }
 
+            // Step 2: Upload the new image if available
+            if (cardImage && cardImage.startsWith('file://')) {
+                imageUrl = await uploadImageToSupabase(cardImage);
+            } else {
+                imageUrl = cardImage;
+            }
+
+            // Step 3: Prepare payload
             const payload = {
                 name: cardName,
                 number: cardNumber,
                 description: cardDescription,
-                image_url: imageUrl,
+                ...(imageUrl && { image_url: imageUrl }),
             };
 
-            console.log('PAYLOAD:', payload);
+            let result;
 
-            const { data, error } = await supabase
-                .from('cards')
-                .insert(payload)
-                .select();
+            if (isEditing && cardId) {
+                // Step 4: Update the existing card
+                result = await supabase
+                    .from('cards')
+                    .update(payload)
+                    .eq('id', cardId)
+                    .select();
+            } else {
+                // Step 5: Insert new card
+                result = await supabase
+                    .from('cards')
+                    .insert(payload)
+                    .select();
+            }
 
-            if (error) {
-                console.log('INSERT ERROR:', error);
-                setErrorMsg('Failed to add card. Check console logs.');
+            if (result.error) {
+                console.log('SAVE ERROR:', result.error);
+                setErrorMsg('Failed to save card.');
                 return;
             }
 
-            console.log('INSERT SUCCESS:', data);
             router.replace('/(app)/allCards');
-
         } catch (err) {
             console.log('CATCH ERROR:', err);
-            setErrorMsg('Failed to add card. Please try again.');
+            setErrorMsg('Failed to save card.');
         } finally {
             setLoading(false);
         }
@@ -185,29 +226,78 @@ const uploadImageToSupabase = async (uri: string) => {
 
                             {/* Card Preview */}
                             <View className="px-6 mb-8 items-center">
-                                <View className="w-72 h-[420px] rounded-[32px] bg-neutral-900 border border-white/10 overflow-hidden shadow-2xl">
-                                    <LinearGradient
-                                        colors={['#1e1e1e', '#000']}
-                                        className="flex-1 justify-between p-8"
-                                    >
-                                        <View className="items-center">
-                                            <Text className="text-amber-200/40 tracking-[4px] uppercase text-[10px] font-bold">The Oracle</Text>
-                                            <View className="h-[1px] w-16 bg-amber-200/20 mt-2" />
-                                        </View>
+                                <View className="w-72 h-[420px] rounded-[32px] border border-white/10 overflow-hidden shadow-2xl">
+                                    {cardImage ? (
+                                        // IMAGE PREVIEW BACKGROUND
+                                        <ImageBackground
+                                            source={{ uri: cardImage }}
+                                            resizeMode="cover"
+                                            style={{ flex: 1 }}
+                                        >
+                                            {/* Overlay for readability */}
+                                            <View className="absolute inset-0 bg-black/55" />
 
-                                        <View className="items-center">
-                                            <Text className="text-white text-4xl font-light text-center" numberOfLines={2}>
-                                                {cardName || 'Card Name'}
-                                            </Text>
-                                            <Text className="text-amber-200/60 italic mt-4 text-center text-sm" numberOfLines={3}>
-                                                {cardDescription || 'Card Description'}
-                                            </Text>
-                                        </View>
+                                            <View className="flex-1 justify-between p-8">
+                                                <View className="items-center">
+                                                    <Text className="text-amber-200/40 tracking-[4px] uppercase text-[10px] font-bold">
+                                                        The Oracle
+                                                    </Text>
+                                                    <View className="h-[1px] w-16 bg-amber-200/20 mt-2" />
+                                                </View>
 
-                                        <Text className="text-gray-500 text-center text-xs italic">
-                                            Card #{cardNumber || '?'}
-                                        </Text>
-                                    </LinearGradient>
+                                                <View className="items-center">
+                                                    <Text
+                                                        className="text-white text-4xl font-light text-center"
+                                                        numberOfLines={2}
+                                                    >
+                                                        {cardName || 'Card Name'}
+                                                    </Text>
+                                                    <Text
+                                                        className="text-amber-200/60 italic mt-4 text-center text-sm"
+                                                        numberOfLines={3}
+                                                    >
+                                                        {cardDescription || 'Card Description'}
+                                                    </Text>
+                                                </View>
+
+                                                <Text className="text-gray-300 text-center text-xs italic">
+                                                    Card #{cardNumber || '?'}
+                                                </Text>
+                                            </View>
+                                        </ImageBackground>
+                                    ) : (
+                                        // DEFAULT GRADIENT BACKGROUND
+                                        <LinearGradient
+                                            colors={['#1e1e1e', '#000']}
+                                            className="flex-1 justify-between p-8"
+                                        >
+                                            <View className="items-center">
+                                                <Text className="text-amber-200/40 tracking-[4px] uppercase text-[10px] font-bold">
+                                                    The Oracle
+                                                </Text>
+                                                <View className="h-[1px] w-16 bg-amber-200/20 mt-2" />
+                                            </View>
+
+                                            <View className="items-center">
+                                                <Text
+                                                    className="text-white text-4xl font-light text-center"
+                                                    numberOfLines={2}
+                                                >
+                                                    {cardName || 'Card Name'}
+                                                </Text>
+                                                <Text
+                                                    className="text-amber-200/60 italic mt-4 text-center text-sm"
+                                                    numberOfLines={3}
+                                                >
+                                                    {cardDescription || 'Card Description'}
+                                                </Text>
+                                            </View>
+
+                                            <Text className="text-gray-500 text-center text-xs italic">
+                                                Card #{cardNumber || '?'}
+                                            </Text>
+                                        </LinearGradient>
+                                    )}
                                 </View>
                             </View>
 

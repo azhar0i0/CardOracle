@@ -2,14 +2,15 @@ import OracleCard from '@/components/cards';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
-import React, { useEffect, useRef } from 'react';
-import { Animated, Dimensions, Pressable, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Modal, Animated, Dimensions, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabase } from '@/lib/supabase';
 
 const { width, height } = Dimensions.get('window');
 
 /* ------------------ PARTICLE ------------------ */
-function Particle({ size, x, y, delay }: any) {
+function Particle({ size, x, y }: any) {
   const translateY = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0.4)).current;
 
@@ -21,7 +22,7 @@ function Particle({ size, x, y, delay }: any) {
         useNativeDriver: true,
       })
     ).start();
-    
+
     Animated.loop(
       Animated.timing(opacity, {
         toValue: 0.8,
@@ -54,11 +55,94 @@ function Particle({ size, x, y, delay }: any) {
 
 /* ------------------ MAIN SCREEN ------------------ */
 export default function HomePage() {
-  const scale = useRef(new Animated.Value(1)).current;
+  const [cards, setCards] = useState<any[]>([]);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  
+  // Animation Refs
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  const openModal = () => {
+    setShowLogoutModal(true);
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeModal = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+
+    setTimeout(() => {
+      setShowLogoutModal(false);
+      scaleAnim.setValue(0.9);
+    }, 150);
+  };
+
+  const confirmLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      closeModal(); // Use closeModal to trigger animation
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
+
+  const fetchCards = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('cards')
+        .select('*');
+
+      if (error) throw error;
+      setCards(data || []);
+    } catch (error) {
+      console.error('Error fetching cards:', error);
+    }
+  };
+
+  /* --- AUTH & DATA LOGIC --- */
+  useEffect(() => {
+    // 1. Initial Fetch
+    const initializeSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        fetchCards();
+      }
+    };
+
+    initializeSession();
+
+    // 2. Auth Listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (session) {
+          fetchCards();
+        } else {
+          setCards([]); // Clear cards on sign out
+        }
+      }
+    );
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, []);
 
   return (
     <View className="flex-1">
-      {/* 🌌 GRADIENT BACKGROUND */}
       <LinearGradient
         colors={[
           'rgb(26, 15, 46)',
@@ -77,34 +161,71 @@ export default function HomePage() {
             size={Math.random() * 4 + 2}
             x={Math.random() * width}
             y={Math.random() * height}
-            delay={i * 200}
           />
         ))}
 
         <SafeAreaView className="flex-1">
-          {/* SETTINGS & ALL CARDS */}
+          {/* SETTINGS & LOGOUT */}
           <View className="flex-row justify-end px-6 pt-4 gap-4">
             <Link href="/(app)/allCards" asChild>
               <Pressable>
                 <Ionicons name="grid-outline" size={18} color="gray" />
               </Pressable>
             </Link>
-            <Link href="/settings" asChild>
-              <Pressable>
-                <Ionicons name="settings-outline" size={18} color="gray" />
-              </Pressable>
-            </Link>
+
+            <Pressable onPress={openModal}>
+              <Ionicons name="log-out-outline" size={18} color="gray" />
+            </Pressable>
           </View>
+
+          {/* Logout Modal */}
+          <Modal transparent visible={showLogoutModal} animationType="none">
+            <Animated.View
+              style={{ opacity: fadeAnim }}
+              className="flex-1 bg-black/60 justify-center items-center px-6"
+            >
+              <Animated.View
+                style={{ transform: [{ scale: scaleAnim }] }}
+                className="w-full bg-slate-900 rounded-3xl border border-white/10 p-6"
+              >
+                <Ionicons
+                  name="log-out-outline"
+                  size={28}
+                  color="#ef4444"
+                  style={{ alignSelf: 'center', marginBottom: 12 }}
+                />
+                <Text className="text-white text-lg font-semibold text-center">Sign out?</Text>
+                <Text className="text-gray-400 text-sm text-center mt-2">
+                  You’ll need to sign in again to access your cards.
+                </Text>
+
+                <View className="flex-row gap-x-4 mt-6">
+                  <Pressable
+                    onPress={closeModal}
+                    className="flex-1 py-3 rounded-xl border border-white/10 items-center"
+                  >
+                    <Text className="text-gray-300 font-medium">Cancel</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={confirmLogout}
+                    className="flex-1 py-3 rounded-xl bg-red-500 items-center"
+                  >
+                    <Text className="text-white font-semibold">Sign Out</Text>
+                  </Pressable>
+                </View>
+              </Animated.View>
+            </Animated.View>
+          </Modal>
 
           {/* INTRO TEXT */}
           <View className="px-10 mt-6 items-center">
-            <Text className="text-gray-400 text-center font-semibold text-sm leading-5">
+            <Text className="text-gray-400 text-center font-semibold text-[10px] leading-5">
               Take a moment to center yourself. Focus on your question or intention.
               When you're ready, tap the deck to shuffle and reveal your guidance.
             </Text>
           </View>
 
-          {/* 🔮 TITLE */}
           <View className="items-center mt-10">
             <Text className="text-white text-4xl tracking-[6px] font-light uppercase">
               Card Oracle
@@ -114,12 +235,10 @@ export default function HomePage() {
             </Text>
           </View>
 
-          {/* 🃏 CARD */}
           <View className="flex-1 justify-center items-center">
-            <OracleCard />
+            <OracleCard cards={cards} />
           </View>
 
-          {/* FOOTER */}
           <View className="pb-10 items-center">
             <Text className="text-gray-400 tracking-[2px] uppercase text-xs">
               Tap the deck to shuffle & draw
