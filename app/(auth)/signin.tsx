@@ -1,15 +1,14 @@
-import { Link, router } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  Platform, 
-  Text, 
-  View, 
-  Pressable, 
-  Animated, 
-  Easing, 
-  Image, 
-  StyleSheet 
+import { Link, router } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Easing,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
 import { MagicalButton, MagicalCard, MagicalInput } from '../../components/MagicalUI';
 import { supabase } from '../../lib/supabase';
@@ -54,10 +53,26 @@ export default function SignIn() {
     });
 
     if (error) {
-      setErrorMsg(error.message);
+      if (error.message.includes('Email not confirmed')) {
+        setErrorMsg('Please verify your email address. Check your inbox.');
+      } else {
+        setErrorMsg(error.message);
+      }
     }
 
     setLoading(false);
+  };
+
+  const resendConfirmation = async () => {
+    if (!email) return setErrorMsg('Please enter your email to resend confirmation.');
+    setLoading(true);
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+    });
+    setLoading(false);
+    if (error) setErrorMsg(error.message);
+    else setErrorMsg('Confirmation email sent! Check your inbox.');
   };
 
   return (
@@ -82,10 +97,10 @@ export default function SignIn() {
             <View style={styles.iconWrapper}>
               <View style={styles.iconGlow} />
               <Animated.View style={{ transform: [{ translateY: floatingAnim }] }}>
-                <Image 
-                  source={ICON_SOURCE} 
-                  style={styles.mainIcon} 
-                  resizeMode="contain" 
+                <Image
+                  source={ICON_SOURCE}
+                  style={styles.mainIcon}
+                  resizeMode="contain"
                 />
               </Animated.View>
             </View>
@@ -126,14 +141,14 @@ export default function SignIn() {
                 secureTextEntry
               />
             </View>
-            
+
             {/* Forgot Password Link */}
             <View style={{ alignItems: 'flex-end', marginTop: 10 }}>
-                <Pressable onPress={() => router.push('/forget-password')}>
-                  <Text style={{ color: '#E879F9', fontSize: 12, fontWeight: '600' }}>
-                    Forgot Password?
-                  </Text>
-                </Pressable>
+              <Pressable onPress={() => router.push('/forget-password')}>
+                <Text style={{ color: '#E879F9', fontSize: 12, fontWeight: '600' }}>
+                  Forgot Password?
+                </Text>
+              </Pressable>
             </View>
 
             <View className="mt-5">
@@ -143,6 +158,12 @@ export default function SignIn() {
                 isLoading={loading}
                 disabled={loading}
               />
+
+              {errorMsg.includes('verify your email') && (
+                <Pressable onPress={resendConfirmation} style={{ marginTop: 12, alignItems: 'center' }}>
+                  <Text style={{ color: '#E879F9', fontWeight: '600' }}>Resend Verification Email</Text>
+                </Pressable>
+              )}
             </View>
           </MagicalCard>
 

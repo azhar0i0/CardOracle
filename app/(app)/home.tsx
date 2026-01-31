@@ -1,11 +1,12 @@
 import OracleCard from '@/components/cards';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, Animated, Dimensions, Pressable, Text, View } from 'react-native';
+import { Animated, Dimensions, Modal, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { supabase } from '@/lib/supabase';
 
 const { width, height } = Dimensions.get('window');
 
@@ -57,7 +58,7 @@ function Particle({ size, x, y }: any) {
 export default function HomePage() {
   const [cards, setCards] = useState<any[]>([]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  
+
   // Animation Refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -114,32 +115,15 @@ export default function HomePage() {
   };
 
   /* --- AUTH & DATA LOGIC --- */
+  const { session, isAdmin } = useAuth();
+
   useEffect(() => {
-    // 1. Initial Fetch
-    const initializeSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        fetchCards();
-      }
-    };
-
-    initializeSession();
-
-    // 2. Auth Listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (session) {
-          fetchCards();
-        } else {
-          setCards([]); // Clear cards on sign out
-        }
-      }
-    );
-
-    return () => {
-      authListener?.subscription?.unsubscribe();
-    };
-  }, []);
+    if (session) {
+      fetchCards();
+    } else {
+      setCards([]);
+    }
+  }, [session]);
 
   return (
     <View className="flex-1">
@@ -165,13 +149,15 @@ export default function HomePage() {
         ))}
 
         <SafeAreaView className="flex-1">
-          {/* SETTINGS & LOGOUT */}
+          {/* AllCards & LOGOUT */}
           <View className="flex-row justify-end px-6 pt-4 gap-4">
-            <Link href="/(app)/allCards" asChild>
-              <Pressable>
-                <Ionicons name="grid-outline" size={18} color="gray" />
-              </Pressable>
-            </Link>
+            {isAdmin && (
+              <Link href="/(app)/allCards" asChild>
+                <Pressable>
+                  <Ionicons name="grid-outline" size={18} color="gray" />
+                </Pressable>
+              </Link>
+            )}
 
             <Pressable onPress={openModal}>
               <Ionicons name="log-out-outline" size={18} color="gray" />
